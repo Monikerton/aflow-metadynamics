@@ -1,0 +1,5 @@
+outputs/
+data/
+__pycache__/
+wandb/
+configs/run_compare_pca_david.yaml

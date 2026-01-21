@@ -1,0 +1,63 @@
+# Base config for scripts/run_openmm_plumed_metad.py
+
+prot_name: 7jfl_C
+ensemble_dir: data/alphaflow/ensembles
+reference_dir: data/alphaflow/single_pdbs
+solvated_dir: outputs/cache/solvated_pdbs
+out_base_dir: outputs/runs
+biased: true # makes the model run metadynamics (true) or just regular MD (false)
+
+
+
+
+
+# optional: if omitted, script can auto-make one
+descriptor: null
+
+# Feature/PCA settings
+top_m: 80
+min_seq_sep: 3
+periodic: true          # if true: MDTraj periodic=True and PLUMED distances without NOPBC
+n_components: 2
+random_state: 0
+label_prefix: cc_r
+
+
+# Metadynamics settings
+well_tempered: true
+pace: 500
+height: 0.1
+energy_unit: kcal/mol # kj/mol, kcal/mol, Ha
+biasfactor: 10.0
+
+suggest_metad_params: false #if true, will overridesigma, grid_*
+sigma: [1.1909277439117432, 0.9176923036575317]
+grid_min: [-23.818553924560547, -18.353845596313477]
+grid_max: [23.818553924560547, 18.353845596313477]
+grid_bin: [200, 200]
+temperature: 300.0
+stride: 500
+
+# OpenMM run settings
+run_name: null            # optional; if null, helper will pick a default stem
+nsteps: 100000000      # total number of MD steps
+dt_ps: 0.002
+friction_per_ps: 1.0
+outfreq_steps: 500
+minimize: true
+barostat: true
+pressure_bar: 1.0
+
+# GPU
+gpu: true
+gpu_id: 0
+
+# Weights & Biases
+wandb: false
+wandb_project: aflow-metadynamics
+wandb_name: null
+wandb_group: null
+
+# Stream COLVAR -> W&B (only used if wandb: true)
+wandb_colvar: false
+wandb_colvar_poll_s: 10.0

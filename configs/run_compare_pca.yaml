@@ -1,0 +1,18 @@
+out_dir: outputs/compare/7jfl_C
+
+reference_md:
+  top: datasets/atlas/7jfl_C/7jfl_C.pdb ### From atlas dataset
+  traj: # PUT PATH TO UNBIASED TRAJECTORY HERE (e.g., from prior OpenMM run)
+
+biased_run_dir: # Biased run directory from prior metadynamics run
+unbiased_run_dir:     # optional (delete if not used)
+alphaflow_pdb: # the PDB of the ensembles from AlphaFlow 
+
+temperature_K: 300.0
+energy_unit: kbt
+
+atom_sel: "protein and name CA"
+superpose: true
+
+metrics:
+  - pca_compare
