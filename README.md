@@ -39,6 +39,7 @@ Runs are stored in structured per-system directories.
 Biased trajectories are run for ~200 ns, while unbiased reference trajectories are run for ~5 µs.
 The goal is for the biased simulations to recover the same regions of configuration space as the long unbiased runs,
 as assessed by overlap and free energy structure in PCA space.
+
 ---
 
 ### 3. Trajectory postprocessing
@@ -51,6 +52,7 @@ Each run directory is postprocessed to generate **canonical, comparison-ready ou
   - final structure used as the topology for analysis
 
 After this step, all downstream analysis uses only these files.
+
 ---
 
 ### 4. Topology harmonization (minimal & robust)
@@ -92,24 +94,6 @@ Currently supported:
   - consistent color scaling across ensembles
 
 Each metric writes results into its own output subdirectory.
-
----
-
-## Expected run directory structure
-
-Each OpenMM run directory must contain:
-
-
-run_dir/
-├── fixed.xtc
-├── fixed_final.pdb
-├── COLVAR_biased.dat (or COLVAR_unbiased.dat)
-├── params.json
-└── ...
-
-
-
-The comparison pipeline **only consumes these canonical files**.
 
 ---
 
