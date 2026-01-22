@@ -38,6 +38,6 @@ class CompareJobInputs:
     unbiased_std: Optional[md.Trajectory] = None
     alphaflow_std: Optional[md.Trajectory] = None
 
-    # NEW: thermodynamic interpretation for rbias reweighting
+    # thermodynamic interpretation for rbias reweighting
     temperature_K: float = 300.0
     energy_unit: EnergyUnit = "kJ"

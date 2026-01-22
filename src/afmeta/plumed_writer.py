@@ -17,10 +17,11 @@ def define_distance_actions_from_feature_defs(
 ) -> List[str]:
     """Emit PLUMED DISTANCE lines from ordered FeatureDefs (distance-only).
 
-    This is the robust version: PLUMED variable labels come directly from
-    `FeatureDef.label`, so there is no possibility of label drift between:
+    PLUMED variable labels come directly from
+    `FeatureDef.label`, to ensure that
       - the base DISTANCE actions
       - the PCA COMBINE ARG list
+      match. 
 
     Assumptions
     -----------

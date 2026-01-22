@@ -13,8 +13,8 @@ from pathlib import Path
 import mdtraj as md
 import sys
 
-indir = Path("/data/cb/scratch/dkwabiad/aflow_metad/outputs/cleaned_metad_trajs/unbiased/7jfl_C/7jfl_C_unbiased.xtc")
-outdir = Path("/data/cb/scratch/dkwabiad/aflow_metad/outputs/cleaned_metad_trajs/unbiased/7jfl_C/7jfl_C_unbiased.xtc")
+indir = Path("") #path to alphaflow multi-model pdbs
+outdir = Path("")
 
 print(indir.is_dir())
 

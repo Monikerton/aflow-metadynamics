@@ -128,6 +128,4 @@ https://github.com/tiwarylab/alphafold2rave
 Specifically, the idea of ranking and selecting distances based on ensemble variability follows the approach implemented in:
 https://github.com/tiwarylab/alphafold2rave/blob/f77266e385b5279eb15bc868bf10d1031a0cce6f/ravefuncs.py#L162-L198
 
-AlphaFold2-RAVE is also released under the MIT License.
-
-This repository does not reuse AlphaFold2-RAVE code directly, but adapts the underlying concept to a deterministic, PCA-aligned comparison pipeline designed for metadynamics validation and ensemble benchmarking.
+AlphaFold2-RAVE is also released under the MIT License. We also use some similar code to remove disulfide bonds

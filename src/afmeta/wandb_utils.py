@@ -71,7 +71,7 @@ def start_wandb_colvar_stream(
     """
     Stream COLVAR rows to W&B as they appear.
 
-    Assumes your PLUMED PRINT order is:
+    Assumes PLUMED PRINT order is:
       pc1 pc2 metad.bias metad.rbias metad.rct
 
     Logs at step = row_index * stride_steps (MD steps).
