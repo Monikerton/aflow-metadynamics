@@ -134,8 +134,8 @@ def suggest_metad_params_from_pca(dists, pca):
     sigma = 0.5 * s
 
     # GRID bounds = mean ± 10 * std . Farther is better, just so that we sample the entire grid. 
-    grid_min = (m - 10*s)
-    grid_max = (m + 10*s)
+    grid_min = (m - 30*s) #EDIT 2/1/26: changed to 30 to capture more of the grid
+    grid_max = (m + 30*s)
 
     # Bins from spacing ≈ SIGMA/5 (guard against zero). Plumed suggests this as a viable starting point for a grid: https://www.plumed.org/doc-v2.9/user-doc/html/_m_e_t_a_d.html 
     spacing = np.maximum(sigma / 5.0, 1e-6)
