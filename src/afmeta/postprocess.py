@@ -5,6 +5,8 @@ from pathlib import Path
 import shutil
 import mdtraj as md
 
+def _clean_marker(xtc_path: Path) -> Path:
+    return Path(xtc_path).with_suffix(Path(xtc_path).suffix + ".cleaned")
 
 def clean_xtc(
     *,
@@ -14,6 +16,8 @@ def clean_xtc(
     make_whole: bool = True,
     image_molecules: bool = True,
     center: bool = False,
+    write_marker: bool = True,
+
 ) -> Path:
     """
     Minimal MDTraj-based cleanup:
@@ -41,6 +45,10 @@ def clean_xtc(
         t.center_coordinates(inplace=True)
 
     t.save_xtc(str(xtc_out))
+    if write_marker: 
+        _clean_marker(xtc_out).touch()
+
+
     return xtc_out
 
 
@@ -72,28 +80,35 @@ if __name__ == "__main__":
     from pathlib import Path
 
     FORCE = True
+    DATE = "2026-01-26"
+    MODE = "biased"
+    PROT = "*"
+
+    ROOT = Path(__file__).resolve().parents[2]
+    BASE = ROOT / "outputs" / "runs" / MODE 
 
     RUN_DIRS = [
         Path("/data/cb/scratch/dkwabiad/aflow-metadynamics/outputs/runs/biased/7jfl_C/2026-01-20/golden_p500_h0.1_s1.19-0.918_bf10.0_n100e6__87e07bb7"),
     ]
 
-    for run_dir in RUN_DIRS:
-        xtc = run_dir / "fixed.xtc"
-        top = run_dir / "fixed_final.pdb"  # use this as topology
-        out = run_dir / "fixed.xtc"        # overwrite in place
-
-        if not xtc.exists():
-            raise FileNotFoundError(xtc)
-        if not top.exists():
-            raise FileNotFoundError(top)
-
-        if (not FORCE) :
-            print(f"[skip] {run_dir}")
-            continue
-
-        tmp = run_dir / "fixed.xtc.tmp"
+    def clean_run(run_dir: Path) -> None:
+        xtc, top = run_dir/"fixed.xtc", run_dir/"fixed_final.pdb"
+        
+        if not (xtc.exists() and top.exists()):
+            print(f"[skip] {run_dir} (missing files)"); return
+        
+        if (not FORCE) and _clean_marker(xtc).exists():
+            print(f"[skip] {run_dir} (already cleaned)"); return
+        
+        tmp = run_dir/"fixed.xtc.tmp"
+        
         print(f"[cleaning] {run_dir} ... ", end="", flush=True)
+        
         clean_xtc(xtc_in=xtc, top_pdb=top, xtc_out=tmp, make_whole=True, image_molecules=True)
-        tmp.replace(out)
-
-        print(f"[done] {run_dir}")
+        
+        tmp.replace(xtc) 
+        _clean_marker(xtc).touch()
+        
+    #get all the proteins for a specified date
+    for d in sorted(p for p in BASE.glob(f"{PROT}/{DATE}/*") if p.is_dir()):
+        clean_run(d)
