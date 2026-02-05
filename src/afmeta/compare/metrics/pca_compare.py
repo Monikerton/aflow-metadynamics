@@ -15,6 +15,17 @@ from ...features import prepare_pca_features, transform_with_feature_result
 def _flat(traj) -> np.ndarray:
     return traj.xyz.reshape(traj.n_frames, -1)
 
+def _basic_stats(x: np.ndarray) -> Dict[str, float]:
+    x = np.asarray(x, dtype=float)
+    x = x[np.isfinite(x)]
+    if x.size == 0:
+        return {"mean": float("nan"), "std": float("nan"), "min": float("nan"), "max": float("nan")}
+    return {
+        "mean": float(x.mean()),
+        "std": float(x.std(ddof=0)),
+        "min": float(x.min()),
+        "max": float(x.max()),
+    }
 
 def _xy_range(*xys: Optional[np.ndarray], pad: float = 0.05) -> Tuple[Tuple[float, float], Tuple[float, float]]:
     xs = np.concatenate([xy[:, 0] for xy in xys if xy is not None and len(xy)])
@@ -114,18 +125,21 @@ def compute(job, out_dir: Path) -> Dict[str, Any]:
     af_xy = transform_with_feature_result(alphaflow, ft) if alphaflow is not None else None
     seed_xy = ref_xy[:1]
 
-    seed_xy = ref_xy[:1]
-
     # weights from rbias if present
     weights = None
     rbias_stats = None
+
     if job.biased.colvar is not None:
         rb = rbias_per_frame_from_colvar(job.biased.colvar, biased.time)
-        assert rb.shape[0] == biased.n_frames
+        if rb.shape[0] != biased.n_frames:
+            raise ValueError(f"rbias length mismatch: rb={rb.shape[0]} vs biased.n_frames={biased.n_frames}")
 
         beta = _beta(job.energy_unit, float(job.temperature_K))
         w = np.exp(beta * (rb - rb.max()))
         weights = w / w.mean()
+
+        rbias_stats = {
+            "rbias": _basic_stats(rb)}
 
     rng = _xy_range(ref_xy, bia_xy, unb_xy, af_xy)
     bins = 120
@@ -138,46 +152,31 @@ def compute(job, out_dir: Path) -> Dict[str, Any]:
     vals = np.concatenate([F_ref[np.isfinite(F_ref)], F_bia[np.isfinite(F_bia)], F_unb[np.isfinite(F_unb)]])
     vmin, vmax = (float(np.percentile(vals, 5)), float(np.percentile(vals, 95))) if vals.size else (0.0, 1.0)
 
-    import matplotlib
-    matplotlib.use("Agg", force=True)
-    import matplotlib.pyplot as plt  # noqa: E402
+    #save artifacts
+    artifacts: Dict[str, str] = {}
 
-    fig, axes = plt.subplots(2, 2, figsize=(8, 6), constrained_layout=True)
-    extent = [x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]]
+    def _save(name: str, data: np.ndarray) -> None:
+        p = out_dir / f"{name}.npy"
+        np.save(p, data)
+        artifacts[name] = p.name
+    
+    _save("ref_xy", ref_xy)
+    _save("bia_xy", bia_xy)
+    _save("unb_xy", unb_xy)
+    if af_xy is not None:
+        _save("af_xy", af_xy)
+    _save("seed_xy", seed_xy)
+    _save("F_ref", F_ref)
+    _save("F_bia", F_bia)
+    _save("F_unb", F_unb)
+    _save("x_edges", x_edges)
+    _save("y_edges", y_edges)   
 
-    def fes(ax, F, title: str):
-        im = ax.imshow(F.T, origin="lower", extent=extent, aspect="auto", cmap="Greens_r", vmin=vmin, vmax=vmax)
-        ax.set(title=title, xlabel="PC1", ylabel="PC2")
-        ax.plot(seed_xy[0, 0], seed_xy[0, 1], "o", ms=4, mew=0.5, color="red", alpha=0.9)
-        return im
-
-    def scatter(ax, xy, title: str):
-        ax.scatter(xy[:, 0], xy[:, 1], s=10, alpha=0.35, linewidths=0)
-        ax.set(title=title, xlabel="PC1", ylabel="PC2")
-        ax.plot(seed_xy[0, 0], seed_xy[0, 1], "o", ms=4, mew=0.5, color="red", alpha=0.9)
-        (xmin, xmax), (ymin, ymax) = rng
-        ax.set_xlim(xmin, xmax)
-        ax.set_ylim(ymin, ymax)
-
-    im0 = fes(axes[0, 0], F_ref, "Reference MD")
-    scatter(axes[0, 1], af_xy if af_xy is not None else ref_xy, "AlphaFlow ensemble" if af_xy is not None else "(No AlphaFlow) Reference scatter")
-    fes(axes[1, 0], F_bia, "Biased (reweighted)" if weights is not None else "Biased")
-    fes(axes[1, 1], F_unb, unb_title)
-
-    # one shared colorbar for all FES panels
-    cbar = fig.colorbar(im0, ax=[axes[0, 0], axes[1, 0], axes[1, 1]], pad=0.02)
-    cbar.set_label("ΔG (kBT)")
-
-    for ax in axes.flat:
-        ax.grid(True, alpha=0.3)
-
-    plot_path = out_dir / "pca_compare.png"
-    fig.savefig(plot_path, dpi=300, bbox_inches="tight")
-    plt.close(fig)
 
     return {
         "metric": "pca_compare",
-        "plot_path": str(plot_path),
+        "artifacts": artifacts,
+        "unb_title": unb_title,
         "pca_explained_variance_ratio": [float(x) for x in ft.model.explained_variance_ratio_],
         "temperature_K": float(job.temperature_K),
         "energy_unit": job.energy_unit,

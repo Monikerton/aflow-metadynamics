@@ -9,7 +9,7 @@ from .inputs import CompareJobInputs
 from .io import load_reference_md, load_run_dir, load_alphaflow_ensemble
 from .preprocess import standardize_to_reference
 from .align import slice_to_common_ca
-from .registry import METRICS
+from .registry import METRICS, PLOTTERS
 
 
 def run_compare_job(
@@ -83,13 +83,36 @@ def run_compare_job(
     metric_names = list(metrics) if metrics is not None else ["pca_compare"]
     print(f"Running metrics: {metric_names}")
 
+    metrics_root = out_dir / "metrics"
+    metrics_root.mkdir(exist_ok=True)
+
     results: Dict[str, Any] = {}
     for name in metric_names:
+        print(f"Computing metric '{name}'...")
         if name not in METRICS:
             raise ValueError(f"Unknown metric '{name}'. Available: {sorted(METRICS)}")
-        m_out = out_dir / name
-        m_out.mkdir(exist_ok=True)
-        results[name] = METRICS[name](job, m_out)
+        
+        m_out = metrics_root / name
+        m_out.mkdir(parents=True, exist_ok=True)
+        res = METRICS[name](job, m_out)
+        results[name] = res
+
+    plotter_names = list(PLOTTERS) if PLOTTERS is not None else ["pca_compare"]
+    print(f"Generating plots: {plotter_names}")
+
+    plots_root = out_dir / "plots"
+    plots_root.mkdir(exist_ok=True)
+
+    for name in plotter_names:
+        print(f"Generating plot '{name}'..." )
+        if name not in PLOTTERS:
+            raise ValueError(f"Unknown metric '{name}'. Available: {sorted(PLOTTERS)}")
+        
+        p_out = plots_root / name
+        p_out.mkdir(parents=True, exist_ok=True)
+        plot_path = PLOTTERS[name](results[name], p_out)
+        results[name]["plot_path"] = str(plot_path)
+
 
     meta = {
         "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
