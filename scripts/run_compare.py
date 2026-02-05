@@ -16,6 +16,19 @@ def _must_exist(p: Path, label: str) -> None:
     if not p.exists():
         raise FileNotFoundError(f"{label} does not exist: {p}")
 
+def _infer_protein_date_desc(biased_run_dir: Path) -> tuple[str, str, str]:
+    brd = Path(biased_run_dir)
+
+    desc = brd.name
+    date = brd.parent.name if brd.parent else ""
+    protein = brd.parent.parent.name if brd.parent and brd.parent.parent else ""
+
+    if not protein or not date or not desc:
+        raise ValueError(
+            f"Could not infer (protein/date/desc) from biased_run_dir={brd}. "
+            "Expected .../biased/<protein>/<YYYY-MM-DD>/<descriptor>"
+        )
+    return protein, date, desc
 
 def build_compare_config(args: argparse.Namespace) -> Dict[str, Any]:
     # Start with YAML if provided
@@ -84,8 +97,19 @@ def build_compare_config(args: argparse.Namespace) -> Dict[str, Any]:
 
 def build_compare_kwargs(cfg: Dict[str, Any]) -> dict:
     # Convert config to kwargs for run_compare_job
+    base_out = Path(cfg["out_dir"])
+
+    protein, date, desc = _infer_protein_date_desc(Path(cfg["biased_run_dir"]))
+    out_dir = base_out / "compare" / protein / date / desc
+
+    # record inferred values in effective config
+    cfg["protein"] = protein
+    cfg["run_date"] = date
+    cfg["descriptor"] = desc
+    cfg["out_dir_effective"] = str(out_dir)
+
     return dict(
-        out_dir=Path(cfg["out_dir"]),
+        out_dir=out_dir,
         ref_top=Path(cfg["reference_md"]["top"]),
         ref_traj=Path(cfg["reference_md"]["traj"]),
         biased_run_dir=Path(cfg["biased_run_dir"]),
