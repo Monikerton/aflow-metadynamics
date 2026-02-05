@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import mdtraj as md
+import shutil
 
 from src.afmeta.protonate import fix_pdb
 from src.afmeta.remap import remap_feature_defs
@@ -35,7 +36,8 @@ from src.afmeta.wandb_utils import (
     wandb_finish,
     start_wandb_colvar_stream,
 )
-from src.afmeta.config import RunConfig, load_yaml_config, apply_overrides, dump_yaml, auto_descriptor, derive_paths_from_prot 
+from src.afmeta.config import RunConfig, load_yaml_config, apply_overrides, dump_yaml, auto_descriptor, derive_paths_from_prot
+from src.afmeta.postprocess import clean_xtc, _clean_marker 
 from argparse import BooleanOptionalAction
  
 
@@ -181,7 +183,7 @@ def main() -> None:
 
     print(f"[info] Using ensemble PDB: {cfg.prot_name}")
     print(f"RUNNING FOR {cfg.nsteps * cfg.dt_ps / 1000} nanoseconds.")
-    print(f"Mode is set to {cfg.biased}.")
+    print(f"[info] Running biased? {cfg.biased}.")
     time.sleep(3)  # give user a moment to cancel if nstep is too high
 
     # 1) Load ensemble
@@ -339,6 +341,27 @@ def main() -> None:
             gpu_id=cfg.gpu_id,
             config=sim_cfg,
         )
+        # postprocess outputs (make molecules whole, image, center)
+        fixed_xtc = outdir / "fixed.xtc"
+        fixed_final = outdir / "fixed_final.pdb"
+        marker = _clean_marker(fixed_xtc)
+
+        # always ensure canonical final pdb exists
+        if (not fixed_final.exists()):
+            shutil.copyfile(outs.final_pdb_path, fixed_final)
+
+        # clean only if not already cleaned (or if you decide to force elsewhere)
+        if not marker.exists():
+            tmp = fixed_xtc.with_suffix(".xtc.tmp")
+            clean_xtc(
+                xtc_in=outs.xtc_path,
+                top_pdb=fixed_final,   # stable topology for the XTC
+                xtc_out=tmp,
+                make_whole=True,
+                image_molecules=True,
+            )
+            tmp.replace(fixed_xtc)
+            marker.touch()
         wandb_log(
             run,
             {
