@@ -1,18 +1,23 @@
-out_dir: outputs/compare/7jfl_C
+out_dir: outputs/
+
+ref_crystal_path: /data/cb/scratch/datasets/atlas/7jfl_C/7jfl_C.pdb 
 
 reference_md:
-  top: datasets/atlas/7jfl_C/7jfl_C.pdb ### From atlas dataset
-  traj: # PUT PATH TO UNBIASED TRAJECTORY HERE (e.g., from prior OpenMM run)
+  top: /data/cb/scratch/datasets/atlas/7jfl_C/7jfl_C.pdb ### From atlas dataset
+  traj: /data/cb/scratch/dkwabiad/aflow_metad/outputs/cleaned_gromacs_trajs/7jfl_C/7jfl_C_nowat_centered.xtc  # PUT PATH TO UNBIASED TRAJECTORY HERE (e.g., from prior OpenMM run)
 
-biased_run_dir: # Biased run directory from prior metadynamics run
+biased_run_dir: /data/cb/scratch/dkwabiad/aflow-metadynamics/outputs/runs/biased/7jfl_C/2026-01-26/p500_h0.1_s1.19-0.918_bf10.0_n100e6__87e07bb7 # Biased run directory from prior metadynamics run
 unbiased_run_dir:     # optional (delete if not used)
-alphaflow_pdb: # the PDB of the ensembles from AlphaFlow 
+alphaflow_pdb: data/alphaflow/ensembles/7jfl_C.pdb # the PDB of the ensembles from AlphaFlow 
 
 temperature_K: 300.0
-energy_unit: kbt
+energy_unit: kj
 
 atom_sel: "protein and name CA"
 superpose: true
 
 metrics:
+  - pca_compare
+
+plotters:
   - pca_compare

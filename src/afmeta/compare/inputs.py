@@ -27,13 +27,16 @@ class CompareJobInputs:
     reference_md, biased required.
     """
     out_dir: Path
+    ref_crystal_path: Path
+    ref_crystal: md.Trajectory
+    
     reference_md: Dataset
     biased: Dataset
     unbiased: Optional[Dataset] = None
     alphaflow: Optional[Dataset] = None
 
     # standardized versions produced by preprocess (optional)
-    ref_std: Optional[md.Trajectory] = None
+    ref_md_std: Optional[md.Trajectory] = None
     biased_std: Optional[md.Trajectory] = None
     unbiased_std: Optional[md.Trajectory] = None
     alphaflow_std: Optional[md.Trajectory] = None

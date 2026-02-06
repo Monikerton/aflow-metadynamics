@@ -8,8 +8,6 @@ import numpy as np
 from sklearn.decomposition import PCA
 
 from ..preprocess import rbias_per_frame_from_colvar
-from ...features import prepare_pca_features, transform_with_feature_result
-
 
 
 def _flat(traj) -> np.ndarray:
@@ -57,18 +55,11 @@ def _fes_kbt(
         weights=weights,
     )
     P = H / H.sum() if H.sum() > 0 else H
-    
-    F = -np.log(P + 1e-12)  # epsilon to avoid log(0)
-    F[H == 0] = np.nan # the 0 regions are regarded as snan
 
-    # shift: try seed bin, else global min
-    sx, sy = float(seed_xy[0, 0]), float(seed_xy[0, 1])
-    ix = int(np.searchsorted(x_edges, sx, side="right") - 1)
-    iy = int(np.searchsorted(y_edges, sy, side="right") - 1)
-    if 0 <= ix < F.shape[0] and 0 <= iy < F.shape[1] and np.isfinite(F[ix, iy]):
-        F = F - F[ix, iy]
-    else:
-        F = F - np.nanmin(F)
+    with np.errstate(divide="ignore"):
+        F = -np.log(P)
+    F[np.isinf(F)] = np.nan
+    F = F - np.nanmin(F)
 
     return F, x_edges, y_edges
 
@@ -77,19 +68,19 @@ def _beta(energy_unit: str, T: float) -> float:
     # beta = 1/(kB*T) in matching energy units
     if energy_unit == "kbt":
         return 1.0
-    if energy_unit == "kj":
+    if energy_unit == "kJ":
         kB = 0.0083144621
         return 1.0 / (kB * T)
     if energy_unit == "kcal":
         kB = 0.0019872041
         return 1.0 / (kB * T)
-    raise ValueError(f"Unsupported energy_unit={energy_unit!r} (use 'kj','kcal','kbt').")
+    raise ValueError(f"Unsupported energy_unit={energy_unit!r} (use 'kJ','kcal','kbt').")
 
 
 def compute(job, out_dir: Path) -> Dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    ref = job.ref_std or job.reference_md.traj
+    ref = job.ref_md_std or job.reference_md.traj
     biased = job.biased_std or job.biased.traj
     unbiased = (job.unbiased_std or (job.unbiased.traj if job.unbiased else None))
     alphaflow = (job.alphaflow_std or (job.alphaflow.traj if job.alphaflow else None))
@@ -102,27 +93,17 @@ def compute(job, out_dir: Path) -> Dict[str, Any]:
         # n = min(int(ref.n_frames), int(biased.n_frames)) * 2 // 50 #  TODO: make this generalizable 
         n = 2000
         unbiased_plot = ref[:n]
-        unb_title = f"Reference (subset, n={n})"
+        unb_title = f"Reference MD (200ns)"  # TODO: make this more generalizable based on actual frame counts and time per frame
     else:
         unbiased_plot = unbiased
-        unb_title = "Unbiased (OpenMM)"
-    
-    ft = prepare_pca_features( # TODO: Wrap this to automatically output from the specific job.
-        ref,
-        top_m=80,
-        min_seq_sep=job.reference_md.min_seq_sep if hasattr(job.reference_md, "min_seq_sep") else 3,
-        periodic=False,
-        n_components=2,
-        random_state=0,
-        label_prefix="cc_r",
-    )
+        unb_title = "Unbiased MD (200ns)"
 
-
-
-    ref_xy = transform_with_feature_result(ref, ft)
-    bia_xy = transform_with_feature_result(biased, ft)
-    unb_xy = transform_with_feature_result(unbiased_plot, ft)
-    af_xy = transform_with_feature_result(alphaflow, ft) if alphaflow is not None else None
+    pca = PCA(n_components=2, random_state=0)
+    pca.fit(_flat(ref))
+    ref_xy = pca.transform(_flat(ref))
+    bia_xy = pca.transform(_flat(biased))
+    unb_xy = pca.transform(_flat(unbiased_plot))
+    af_xy = pca.transform(_flat(alphaflow)) if alphaflow is not None else None
     seed_xy = ref_xy[:1]
 
     # weights from rbias if present
@@ -177,7 +158,7 @@ def compute(job, out_dir: Path) -> Dict[str, Any]:
         "metric": "pca_compare",
         "artifacts": artifacts,
         "unb_title": unb_title,
-        "pca_explained_variance_ratio": [float(x) for x in ft.model.explained_variance_ratio_],
+        "pca_explained_variance_ratio": [float(x) for x in pca.explained_variance_ratio_],
         "temperature_K": float(job.temperature_K),
         "energy_unit": job.energy_unit,
         "rbias": rbias_stats,

@@ -20,7 +20,6 @@ def standardize_to_reference(
     """
     ref_idx = ref.topology.select(atom_sel)
     trj_idx = traj.topology.select(atom_sel)
-
     ref_s = ref.atom_slice(ref_idx)
     trj_s = traj.atom_slice(trj_idx)
 
