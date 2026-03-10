@@ -1,3 +1,5 @@
+![Metadynamics Poster](Metadynamics_Poster_Presentation.png)
+
 # Aflow Metadynamics Comparison Pipeline
 
 This repository implements a pipeline for comparing molecular dynamics ensembles generated from:
