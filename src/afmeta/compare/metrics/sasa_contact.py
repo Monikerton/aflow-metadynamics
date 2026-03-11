@@ -205,11 +205,16 @@ def compute(job, out_dir: Path) -> Dict[str, Any]:
     # Guards (still compute for ~300 residues, but warn/skip if huge)
     max_res_for_mi = 350
     max_frames_for_mi = 1500
+    max_frames_for_sasa = 2000   # shrake_rupley segfaults on very large trajectories
     approx_bool_ops_limit = 200_000_000  # rough guard on N*L^2
 
     rng = np.random.default_rng(137)
 
     def _compute_sasa(tag: str, traj: md.Trajectory) -> Tuple[np.ndarray, np.ndarray]:
+        # Subsample if too many frames to avoid shrake_rupley segfault on large arrays
+        if traj.n_frames > max_frames_for_sasa:
+            idx = rng.choice(traj.n_frames, size=max_frames_for_sasa, replace=False)
+            traj = traj[sorted(idx)]
         # Atom SASA (nm^2)
         atom_sasa_nm2 = md.shrake_rupley(traj, probe_radius=probe_radius_nm, mode="atom")
         # Sidechain per residue (nm^2)
