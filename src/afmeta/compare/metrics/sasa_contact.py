@@ -211,6 +211,11 @@ def compute(job, out_dir: Path) -> Dict[str, Any]:
     rng = np.random.default_rng(137)
 
     def _compute_sasa(tag: str, traj: md.Trajectory) -> Tuple[np.ndarray, np.ndarray]:
+        # Strip to protein-only atoms first so that water/ion residues in
+        # the biased/unbiased trajectories don't pollute residue indexing.
+        prot_idx = traj.topology.select("protein")
+        if prot_idx.size < traj.n_atoms:
+            traj = traj.atom_slice(prot_idx)
         # Subsample if too many frames to avoid shrake_rupley segfault on large arrays
         if traj.n_frames > max_frames_for_sasa:
             idx = rng.choice(traj.n_frames, size=max_frames_for_sasa, replace=False)
